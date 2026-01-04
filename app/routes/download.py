@@ -197,6 +197,93 @@ async def download_posts(
 
 
 @router.get(
+    "/download/post",
+    responses={
+        200: {"content": {"application/zip": {}, "image/jpeg": {}, "video/mp4": {}}, "description": "Post file or ZIP"},
+        404: {"model": ErrorResponse},
+        403: {"model": ErrorResponse},
+        401: {"model": ErrorResponse},
+        500: {"model": ErrorResponse}
+    },
+    summary="Download Post by Link",
+    description="Downloads a single Instagram post by URL. Returns raw media when the post has one file; returns a ZIP for multi-item posts."
+)
+async def download_post_by_link(
+    url: Annotated[str, Query(description="Instagram post link or shortcode")],
+    background_tasks: BackgroundTasks,
+    include_metadata: Annotated[bool, Query(description="Include metadata files")] = True,
+):
+    """Download a post via link or shortcode; single media returns file, sidecars return ZIP."""
+    start_time = time.time()
+    temp_dir = None
+    
+    try:
+        service = get_insta_service()
+        temp_dir = create_temp_download_dir("post")
+        result = service.download_post_by_url(url, temp_dir, include_metadata=include_metadata)
+
+        media_files = result.get("media_files", [])
+        if not media_files:
+            cleanup_directory(temp_dir)
+            raise HTTPException(status_code=404, detail="No media found for this post.")
+
+        multiple_media = (
+            result.get("is_sidecar")
+            or (result.get("mediacount") and result["mediacount"] > 1)
+            or len(media_files) > 1
+        )
+
+        if multiple_media:
+            zip_path = create_zip_archive(result["post_folder"], result["shortcode"], temp_dir)
+            schedule_cleanup(temp_dir, settings.CLEANUP_AFTER_SECONDS)
+            return FileResponse(
+                path=zip_path,
+                media_type="application/zip",
+                filename=f"{result['shortcode']}.zip",
+                headers={
+                    "X-Download-Shortcode": result["shortcode"],
+                    "X-Download-Media-Count": str(len(media_files)),
+                    "X-Download-Time-Seconds": f"{time.time() - start_time:.2f}",
+                }
+            )
+
+        file_path = media_files[0]
+        media_type_map = {
+            ".jpg": "image/jpeg",
+            ".jpeg": "image/jpeg",
+            ".png": "image/png",
+            ".webp": "image/webp",
+            ".mp4": "video/mp4",
+        }
+        media_type = media_type_map.get(file_path.suffix.lower(), "application/octet-stream")
+
+        schedule_cleanup(temp_dir, settings.CLEANUP_AFTER_SECONDS)
+
+        return FileResponse(
+            path=file_path,
+            media_type=media_type,
+            filename=f"{result['shortcode']}{file_path.suffix.lower()}",
+            headers={
+                "X-Download-Shortcode": result["shortcode"],
+                "X-Download-Media-Count": "1",
+                "X-Download-Time-Seconds": f"{time.time() - start_time:.2f}",
+            }
+        )
+        
+    except InstagramDownloaderError as e:
+        if temp_dir:
+            cleanup_directory(temp_dir)
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+    except HTTPException:
+        raise
+    except Exception as e:
+        if temp_dir:
+            cleanup_directory(temp_dir)
+        logger.exception("Unexpected error during post link download")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get(
     "/download/stories/{username}",
     responses={
         200: {"content": {"application/zip": {}}, "description": "ZIP file"},

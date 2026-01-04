@@ -1,6 +1,7 @@
 """Instaloader service for downloading Instagram content."""
 
 import os
+import re
 import shutil
 import logging
 from datetime import datetime
@@ -32,6 +33,8 @@ from app.exceptions import (
 from app.models import ProfileInfo, PostMetadata
 
 logger = logging.getLogger(__name__)
+
+MEDIA_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".mp4"}
 
 
 class InstaService:
@@ -249,6 +252,53 @@ class InstaService:
             raise DownloadError(f"Connection error: {str(e)}")
         
         return posts_metadata
+
+    def download_post_by_url(
+        self,
+        url_or_shortcode: str,
+        target_dir: Path,
+        include_metadata: bool = True
+    ) -> dict:
+        """Download a single post by its URL or shortcode."""
+        shortcode = self._extract_shortcode(url_or_shortcode)
+
+        try:
+            post = Post.from_shortcode(self.loader.context, shortcode)
+        except PrivateProfileNotFollowedException:
+            raise PrivateProfileError("This profile")
+        except LoginRequiredException:
+            raise LoginRequiredError("downloading this post")
+        except ProfileNotExistsException:
+            raise DownloadError("Post not found or unreachable.")
+        except ConnectionException as e:
+            if "429" in str(e):
+                raise RateLimitError()
+            raise DownloadError(f"Connection error: {str(e)}")
+
+        try:
+            owner_profile = post.owner_profile
+        except Exception:
+            owner_profile = None
+
+        if owner_profile and owner_profile.is_private and not self.is_logged_in:
+            raise PrivateProfileError(post.owner_username)
+
+        post_folder = target_dir / f"{post.date_local.strftime('%Y-%m-%d')}-{post.shortcode}"
+        media_files = self._download_post_media(post, post_folder)
+        metadata = self._build_post_metadata(post)
+
+        if include_metadata:
+            self._save_metadata(metadata, post_folder / "metadata.txt")
+
+        return {
+            "shortcode": post.shortcode,
+            "owner": post.owner_username,
+            "media_files": media_files,
+            "post_folder": post_folder,
+            "metadata": metadata,
+            "is_sidecar": post.typename == "GraphSidecar",
+            "mediacount": getattr(post, "mediacount", None),
+        }
     
     def _download_single_post(
         self, 
@@ -261,40 +311,10 @@ class InstaService:
         post_date = post.date_local
         date_str = post_date.strftime("%Y-%m-%d")
         post_folder = target_dir / f"{date_str}-{post.shortcode}"
-        post_folder.mkdir(parents=True, exist_ok=True)
-        
-        # Download media
-        try:
-            self.loader.download_post(post, target=post_folder)
-        except Exception as e:
-            logger.warning(f"Error downloading post media: {e}")
-        
-        # Move files from subfolder if created
-        for item in post_folder.glob("*/*"):
-            if item.is_file():
-                shutil.move(str(item), str(post_folder / item.name))
-        
-        # Clean up empty subdirectories
-        for subdir in post_folder.iterdir():
-            if subdir.is_dir():
-                try:
-                    subdir.rmdir()
-                except:
-                    pass
-        
-        # Create metadata
-        metadata = PostMetadata(
-            shortcode=post.shortcode,
-            post_date=post_date,
-            caption=post.caption if post.caption else None,
-            hashtags=list(post.caption_hashtags) if post.caption_hashtags else [],
-            likes=post.likes,
-            comments=post.comments,
-            is_video=post.is_video,
-            video_view_count=post.video_view_count if post.is_video else None,
-            location=post.location.name if post.location else None,
-        )
-        
+        self._download_post_media(post, post_folder)
+
+        metadata = self._build_post_metadata(post)
+
         if include_metadata:
             self._save_metadata(metadata, post_folder / "metadata.txt")
         
@@ -322,6 +342,63 @@ Video: {"Yes" if metadata.is_video else "No"}
         content += f"\nCaption:\n{'-' * 40}\n{metadata.caption or '(No caption)'}\n"
         
         filepath.write_text(content, encoding="utf-8")
+
+    def _extract_shortcode(self, identifier: str) -> str:
+        """Extract shortcode from a post URL or return the identifier if it already is one."""
+        shortcode_pattern = re.compile(
+            r"(?:instagram\.com/(?:p|reel|tv)/|/p/|/reel/|/tv/|/stories/[^/]+/)([A-Za-z0-9_-]{5,})",
+            re.IGNORECASE,
+        )
+        match = shortcode_pattern.search(identifier)
+        if match:
+            return match.group(1)
+        if re.fullmatch(r"[A-Za-z0-9_-]{5,}", identifier):
+            return identifier
+        raise DownloadError("Provide a valid Instagram link or shortcode.")
+
+    def _collect_media_files(self, post_folder: Path) -> list[Path]:
+        """Return media files (photo/video) inside the given folder."""
+        return [
+            item
+            for item in post_folder.iterdir()
+            if item.is_file() and item.suffix.lower() in MEDIA_EXTENSIONS
+        ]
+
+    def _build_post_metadata(self, post: Post) -> PostMetadata:
+        """Create PostMetadata from an Instaloader post."""
+        return PostMetadata(
+            shortcode=post.shortcode,
+            post_date=post.date_local,
+            caption=post.caption if post.caption else None,
+            hashtags=list(post.caption_hashtags) if post.caption_hashtags else [],
+            likes=post.likes,
+            comments=post.comments,
+            is_video=post.is_video,
+            video_view_count=post.video_view_count if post.is_video else None,
+            location=post.location.name if post.location else None,
+        )
+
+    def _download_post_media(self, post: Post, post_folder: Path) -> list[Path]:
+        """Download post media to the given folder and return media file paths."""
+        post_folder.mkdir(parents=True, exist_ok=True)
+
+        try:
+            self.loader.download_post(post, target=post_folder)
+        except Exception as e:
+            logger.warning(f"Error downloading post media: {e}")
+
+        for item in post_folder.glob("*/*"):
+            if item.is_file():
+                shutil.move(str(item), str(post_folder / item.name))
+
+        for subdir in post_folder.iterdir():
+            if subdir.is_dir():
+                try:
+                    subdir.rmdir()
+                except Exception:
+                    pass
+
+        return self._collect_media_files(post_folder)
     
     def download_stories(
         self, 

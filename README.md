@@ -5,6 +5,7 @@ A FastAPI-based wrapper around [Instaloader](https://github.com/instaloader/inst
 ## Features
 
 - Download profile posts, stories (login required), and profile pictures as ZIPs
+- Download single posts by link/shortcode (returns raw file if one item, ZIP if carousel)
 - Profile info lookup with follower counts and verification flag
 - Metadata export for posts (caption, hashtags, likes, comments, location)
 - Temp download isolation per request with scheduled cleanup
@@ -85,6 +86,7 @@ Base URL: `http://localhost:8000`
 | GET | `/download/posts/{username}` | Download posts only (ZIP) |
 | GET | `/download/stories/{username}` | Download active stories (ZIP; login required) |
 | GET | `/download/profile-pic/{username}` | Download profile picture or return URL |
+| GET | `/download/post` | Download a single post by link/shortcode (file or ZIP) |
 
 Common query parameters:
 
@@ -138,6 +140,16 @@ Profile picture URL only:
 
 ```bash
 curl "http://localhost:8000/download/profile-pic/instagram?url_only=true"
+```
+
+Download a single post by link (returns file if one media, ZIP if multiple):
+
+```bash
+curl -L -o post.bin \
+  "http://localhost:8000/download/post?url=https://www.instagram.com/p/POSTCODE/"
+```
+
+Add `include_metadata=false` to skip `metadata.txt` inside ZIPs.
 ```
 
 ## Responses and Headers

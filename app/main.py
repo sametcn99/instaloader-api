@@ -3,15 +3,20 @@
 import logging
 from contextlib import asynccontextmanager
 from datetime import datetime
+from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.routes.download import router as download_router
 from app.exceptions import InstagramDownloaderError
 from app.models import HealthResponse, ErrorResponse
+
+# Static files directory
+STATIC_DIR = Path(__file__).parent / "static"
 
 # Configure logging
 logging.basicConfig(
@@ -44,7 +49,7 @@ app = FastAPI(
         "url": "https://sametcc.me",
     },
     lifespan=lifespan,
-    docs_url="/",
+    docs_url="/docs",
     redoc_url="/redoc",
 )
 
@@ -115,6 +120,17 @@ async def health_check():
 
 # Include routers
 app.include_router(download_router)
+
+# Mount static files
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+
+# Root endpoint - serve index.html
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+async def root():
+    """Serve the main UI page."""
+    index_file = STATIC_DIR / "index.html"
+    return HTMLResponse(content=index_file.read_text(), status_code=200)
 
 
 def start():

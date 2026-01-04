@@ -63,7 +63,8 @@ class InstaService:
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
             "(KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
         )
-        self.loader.context._default_user_agent = user_agent
+        # Use public attribute to override UA instead of touching private internals
+        self.loader.context.user_agent = user_agent
         self.loader.context._session.headers.update(
             {
                 "User-Agent": user_agent,

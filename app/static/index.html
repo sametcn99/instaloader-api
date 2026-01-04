@@ -377,6 +377,14 @@
             cursor: not-allowed;
         }
         
+        .load-more-btn.hidden {
+            display: none;
+        }
+        
+        .disclaimer-text {
+            font-size: 11px;
+        }
+        
         .nav-tabs {
             border-bottom: 1px solid #2d2d2d;
         }
@@ -525,9 +533,9 @@
             box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
             transition: transform 0.1s ease-out;
             transform-origin: center center;
-            -webkit-user-drag: none;
             -webkit-user-select: none;
             user-select: none;
+            pointer-events: auto;
         }
         
         .fullscreen-close {
@@ -628,14 +636,18 @@
                 <a class="navbar-brand text-white" href="/" aria-label="Instagram Downloader - Home">
                     <i class="bi bi-instagram me-2" aria-hidden="true"></i>Instagram Downloader
                 </a>
-                <div class="navbar-nav flex-row" role="menubar">
-                    <a class="nav-link text-secondary me-3" href="/docs" target="_blank" rel="noopener" aria-label="API Documentation" title="API Documentation">
-                        <i class="bi bi-file-code me-1" aria-hidden="true"></i><span class="visually-hidden">API Docs</span>
-                    </a>
-                    <a class="nav-link text-secondary" href="https://sametcc.me/repo/instaloader-api" target="_blank" rel="noopener" aria-label="View source code on GitHub" title="GitHub Repository">
-                        <i class="bi bi-github me-1" aria-hidden="true"></i><span class="visually-hidden">GitHub</span>
-                    </a>
-                </div>
+                <ul class="navbar-nav flex-row list-unstyled mb-0">
+                    <li class="nav-item">
+                        <a class="nav-link text-secondary me-3" href="/docs" target="_blank" rel="noopener" aria-label="API Documentation" title="API Documentation">
+                            <i class="bi bi-file-code me-1" aria-hidden="true"></i><span class="visually-hidden">API Docs</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-secondary" href="https://sametcc.me/repo/instaloader-api" target="_blank" rel="noopener" aria-label="View source code on GitHub" title="GitHub Repository">
+                            <i class="bi bi-github me-1" aria-hidden="true"></i><span class="visually-hidden">GitHub</span>
+                        </a>
+                    </li>
+                </ul>
             </div>
         </nav>
     </header>
@@ -799,7 +811,7 @@
                                     <div class="posts-grid" id="postsGrid" role="list" aria-label="Instagram posts grid">
                                         <!-- Posts will be loaded here -->
                                     </div>
-                                    <button class="load-more-btn" id="loadMoreBtn" onclick="loadMorePosts()" style="display: none;" aria-label="Load more posts">
+                                    <button class="load-more-btn hidden" id="loadMoreBtn" onclick="loadMorePosts()" aria-label="Load more posts">
                                         <span class="spinner-border spinner-border-sm me-2 d-none" id="loadMoreSpinner" aria-hidden="true"></span>
                                         Load More Posts
                                     </button>
@@ -849,9 +861,8 @@
         <p class="text-muted small mb-0">
             <span>Free Instagram Downloader Tool</span> • 
             <a href="/docs" class="text-muted" rel="noopener">API Documentation</a> • 
-            <a href="https://sametcc.me" target="_blank" rel="noopener" class="text-muted">Built by Samet</a>
         </p>
-        <p class="text-muted small mt-2" style="font-size: 11px;">
+        <p class="text-muted small mt-2 disclaimer-text">
             This tool is not affiliated with, authorized, maintained, sponsored or endorsed by Instagram or any of its affiliates.
         </p>
     </footer>
@@ -1126,7 +1137,7 @@
                 loadedPosts = [];
                 document.getElementById('postsGrid').innerHTML = '';
                 document.getElementById('loadedPostsCount').textContent = '0';
-                loadMoreBtn.style.display = 'none';
+                loadMoreBtn.classList.add('hidden');
             }
 
             btn.disabled = true;
@@ -1147,9 +1158,9 @@
                 
                 // Show/hide load more button (API currently returns max 50 at once)
                 if (loadedPosts.length < totalPostCount && loadedPosts.length < 50) {
-                    loadMoreBtn.style.display = 'block';
+                    loadMoreBtn.classList.remove('hidden');
                 } else {
-                    loadMoreBtn.style.display = 'none';
+                    loadMoreBtn.classList.add('hidden');
                 }
                 
             } catch (error) {
@@ -1185,7 +1196,7 @@
                 
                 // Hide button if we've loaded all or reached max
                 if (loadedPosts.length >= totalPostCount || loadedPosts.length >= 50) {
-                    btn.style.display = 'none';
+                    btn.classList.add('hidden');
                 }
                 
             } catch (error) {

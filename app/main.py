@@ -35,6 +35,14 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
+    description=(
+        "FastAPI wrapper around Instaloader. Source code and issue tracker on "
+        "[GitHub](https://github.com/sametcn99/instaloader-api)."
+    ),
+    contact={
+        "name": "sametcc.me",
+        "url": "https://sametcc.me",
+    },
     lifespan=lifespan,
     docs_url="/",
     redoc_url="/redoc",

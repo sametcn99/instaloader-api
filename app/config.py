@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     """Application settings."""
     
     # App settings
-    APP_NAME: str = "Instagram Downloader API"
+    APP_NAME: str = "Instaloader API"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
     

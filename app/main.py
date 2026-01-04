@@ -42,7 +42,7 @@ app = FastAPI(
     version=settings.APP_VERSION,
     description=(
         "FastAPI wrapper around Instaloader. Source code and issue tracker on "
-        "[GitHub](https://github.com/sametcn99/instaloader-api)."
+        "[GitHub](https://sametcc.me/repo/instaloader-api)."
     ),
     contact={
         "name": "sametcc.me",

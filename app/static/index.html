@@ -621,7 +621,13 @@
                                 <div class="result-card posts-section" id="postsSection">
                                     <div class="posts-header">
                                         <h6 class="mb-0"><i class="bi bi-grid-3x3 me-2"></i>Recent Posts</h6>
-                                        <small class="text-muted"><span id="loadedPostsCount">0</span> / <span id="totalPostsCount">0</span> posts</small>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <small class="text-muted"><span id="loadedPostsCount">0</span> / <span id="totalPostsCount">0</span> posts</small>
+                                            <button class="btn btn-sm btn-outline-light" id="fetchPostsBtn" onclick="loadPosts(true)">
+                                                <span class="spinner-border spinner-border-sm me-1 d-none" id="fetchPostsSpinner"></span>
+                                                <span id="fetchPostsText">Fetch Posts</span>
+                                            </button>
+                                        </div>
                                     </div>
                                     <div class="posts-grid" id="postsGrid">
                                         <!-- Posts will be loaded here -->
@@ -894,15 +900,21 @@
                 document.getElementById('profileCard').classList.add('show');
                 document.getElementById('downloadOptions').classList.add('show');
                 
-                // Store total post count and load posts if not private
+                // Store total post count; do NOT auto-fetch posts to avoid rate limits
                 totalPostCount = data.post_count;
                 document.getElementById('totalPostsCount').textContent = data.post_count;
                 
+                // Prepare posts section state
+                loadedPosts = [];
+                document.getElementById('postsGrid').innerHTML = '';
+                document.getElementById('loadedPostsCount').textContent = '0';
+                document.getElementById('loadMoreBtn').style.display = 'none';
+                document.getElementById('fetchPostsBtn').disabled = false;
+                document.getElementById('fetchPostsSpinner').classList.add('d-none');
+                document.getElementById('fetchPostsText').textContent = 'Fetch Posts';
+                
                 if (!data.is_private && data.post_count > 0) {
                     document.getElementById('postsSection').classList.add('show');
-                    loadedPosts = [];
-                    document.getElementById('postsGrid').innerHTML = '';
-                    await loadPosts();
                 } else {
                     document.getElementById('postsSection').classList.remove('show');
                 }
@@ -922,14 +934,29 @@
         }
 
         // Load posts from API
-        async function loadPosts() {
+        async function loadPosts(reset = false) {
+            const btn = document.getElementById('fetchPostsBtn');
+            const spinner = document.getElementById('fetchPostsSpinner');
+            const loadMoreBtn = document.getElementById('loadMoreBtn');
+            const btnText = document.getElementById('fetchPostsText');
+
+            if (reset) {
+                loadedPosts = [];
+                document.getElementById('postsGrid').innerHTML = '';
+                document.getElementById('loadedPostsCount').textContent = '0';
+                loadMoreBtn.style.display = 'none';
+            }
+
+            btn.disabled = true;
+            spinner.classList.remove('d-none');
+            btnText.textContent = 'Loading...';
+
             try {
                 const response = await fetch(`${API_BASE}/profile/${currentUsername}/posts?max_posts=${postsPerLoad}`);
                 const data = await response.json();
                 
                 if (!response.ok) {
-                    console.error('Failed to load posts:', data.detail);
-                    return;
+                    throw new Error(data.detail || 'Failed to load posts');
                 }
                 
                 loadedPosts = data.posts;
@@ -938,13 +965,17 @@
                 
                 // Show/hide load more button (API currently returns max 50 at once)
                 if (loadedPosts.length < totalPostCount && loadedPosts.length < 50) {
-                    document.getElementById('loadMoreBtn').style.display = 'block';
+                    loadMoreBtn.style.display = 'block';
                 } else {
-                    document.getElementById('loadMoreBtn').style.display = 'none';
+                    loadMoreBtn.style.display = 'none';
                 }
                 
             } catch (error) {
-                console.error('Error loading posts:', error);
+                showStatus(error.message, 'danger');
+            } finally {
+                spinner.classList.add('d-none');
+                btn.disabled = false;
+                btnText.textContent = 'Fetch Posts';
             }
         }
         

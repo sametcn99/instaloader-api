@@ -5,9 +5,12 @@ import logging
 from pathlib import Path
 from datetime import datetime
 from typing import Annotated
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, Query, HTTPException, BackgroundTasks
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+
+import requests
 
 from app.config import settings
 from app.models import (
@@ -17,6 +20,7 @@ from app.models import (
     ProfileInfo,
     ErrorResponse,
     SuccessResponse,
+    PostListResponse,
 )
 from app.exceptions import InstagramDownloaderError
 from app.services.insta_service import get_insta_service
@@ -66,6 +70,62 @@ async def get_profile(username: str):
         raise HTTPException(status_code=e.status_code, detail=e.message)
     except Exception as e:
         logger.exception("Unexpected error getting profile")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get(
+    "/proxy/thumbnail",
+    responses={502: {"model": ErrorResponse}, 400: {"model": ErrorResponse}},
+    summary="Proxy Instagram thumbnail",
+    description="Fetches an Instagram CDN image via the backend to avoid client-side CORS issues."
+)
+async def proxy_thumbnail(url: Annotated[str, Query(description="Direct Instagram CDN image URL")]):
+    """Proxy Instagram CDN thumbnails to bypass CORS/hotlink restrictions."""
+    parsed = urlparse(url)
+    allowed_hosts = (
+        "cdninstagram.com",
+        "fbcdn.net",
+        "akamaihd.net",
+        "instagram.com",
+    )
+
+    if not parsed.scheme.startswith("http"):
+        raise HTTPException(status_code=400, detail="Invalid URL scheme")
+    if not any(host in (parsed.hostname or "") for host in allowed_hosts):
+        raise HTTPException(status_code=400, detail="URL host not allowed")
+
+    try:
+        resp = requests.get(url, stream=True, timeout=20)
+        if resp.status_code != 200:
+            raise HTTPException(status_code=502, detail="Failed to fetch thumbnail")
+        content_type = resp.headers.get("Content-Type", "image/jpeg")
+        return StreamingResponse(resp.iter_content(chunk_size=32768), media_type=content_type)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Proxy thumbnail failed")
+        raise HTTPException(status_code=502, detail=str(e))
+
+
+@router.get(
+    "/profile/{username}/posts",
+    response_model=PostListResponse,
+    responses={404: {"model": ErrorResponse}, 403: {"model": ErrorResponse}, 500: {"model": ErrorResponse}},
+    summary="List Profile Posts",
+    description="Returns a list of posts with thumbnails for an Instagram user."
+)
+async def list_profile_posts(
+    username: str,
+    max_posts: Annotated[int, Query(ge=1, le=50, description="Maximum number of posts to return")] = 12,
+):
+    """List posts from a profile with thumbnail URLs."""
+    try:
+        service = get_insta_service()
+        return service.list_posts(username, max_posts=max_posts)
+    except InstagramDownloaderError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+    except Exception as e:
+        logger.exception("Unexpected error listing posts")
         raise HTTPException(status_code=500, detail=str(e))
 
 

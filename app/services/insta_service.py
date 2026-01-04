@@ -28,7 +28,7 @@ from app.exceptions import (
     DownloadError,
     NoContentError,
 )
-from app.models import ProfileInfo, PostMetadata
+from app.models import ProfileInfo, PostMetadata, PostListResponse
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +98,70 @@ class InstaService:
             is_verified=profile.is_verified,
             profile_pic_url=profile.profile_pic_url,
             external_url=profile.external_url or None,
+        )
+    
+    def list_posts(self, username: str, max_posts: int = 12) -> PostListResponse:
+        """
+        List posts from a profile with thumbnail URLs.
+        
+        Args:
+            username: Instagram username
+            max_posts: Maximum number of posts to return (default 12)
+            
+        Returns:
+            PostListResponse with post list
+        """
+        profile = self.get_profile(username)
+        
+        if profile.is_private:
+            raise PrivateProfileError(username)
+        
+        posts_list = []
+        
+        try:
+            posts = profile.get_posts()
+            count = 0
+            
+            for post in posts:
+                if count >= max_posts:
+                    break
+                
+                try:
+                    # Get thumbnail URL
+                    thumbnail_url = post.url  # This is the display URL for the post
+                    post_url = f"https://www.instagram.com/p/{post.shortcode}/"
+                    
+                    metadata = PostMetadata(
+                        shortcode=post.shortcode,
+                        post_date=post.date_local,
+                        caption=post.caption if post.caption else None,
+                        hashtags=list(post.caption_hashtags) if post.caption_hashtags else [],
+                        likes=post.likes,
+                        comments=post.comments,
+                        is_video=post.is_video,
+                        video_view_count=post.video_view_count if post.is_video else None,
+                        location=post.location.name if post.location else None,
+                        thumbnail_url=thumbnail_url,
+                        post_url=post_url,
+                    )
+                    posts_list.append(metadata)
+                    count += 1
+                except Exception as e:
+                    logger.warning(f"Failed to get post info {post.shortcode}: {e}")
+                    continue
+                    
+        except PrivateProfileNotFollowedException:
+            raise PrivateProfileError(username)
+        except ConnectionException as e:
+            if "429" in str(e):
+                raise RateLimitError()
+            raise DownloadError(f"Connection error: {str(e)}")
+        
+        return PostListResponse(
+            username=username,
+            total_posts=profile.mediacount,
+            returned_posts=len(posts_list),
+            posts=posts_list,
         )
     
     def download_profile_pic(self, username: str, target_dir: Path) -> Path | None:

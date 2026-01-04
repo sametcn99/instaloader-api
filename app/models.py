@@ -76,6 +76,16 @@ class PostMetadata(BaseModel):
     is_video: bool
     video_view_count: int | None
     location: str | None
+    thumbnail_url: str | None = None
+    post_url: str | None = None
+
+
+class PostListResponse(BaseModel):
+    """Response model for listing posts."""
+    username: str
+    total_posts: int
+    returned_posts: int
+    posts: list[PostMetadata]
 
 
 class DownloadStats(BaseModel):

@@ -90,6 +90,136 @@
             color: #e0e0e0;
         }
         
+        #profileBio {
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        
+        /* Posts Grid */
+        .posts-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+        
+        @media (max-width: 768px) {
+            .posts-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        .post-item {
+            position: relative;
+            aspect-ratio: 1;
+            overflow: hidden;
+            border-radius: 4px;
+            background: #2d2d2d;
+            cursor: pointer;
+        }
+        
+        .post-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.2s ease;
+        }
+        
+        .post-item:hover img {
+            transform: scale(1.05);
+        }
+        
+        .post-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        
+        .post-item:hover .post-overlay {
+            opacity: 1;
+        }
+        
+        .post-stats {
+            display: flex;
+            gap: 15px;
+            color: #fff;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        .post-stats span {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .post-download-btn {
+            background: #fff;
+            color: #121212;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: background 0.2s;
+        }
+        
+        .post-download-btn:hover {
+            background: #e0e0e0;
+        }
+        
+        .post-type-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            color: #fff;
+            font-size: 16px;
+            text-shadow: 0 0 5px rgba(0,0,0,0.8);
+        }
+        
+        .posts-section {
+            margin-top: 20px;
+        }
+        
+        .posts-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .load-more-btn {
+            background: #2d2d2d;
+            border: 1px solid #3d3d3d;
+            color: #e0e0e0;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 15px;
+            transition: background 0.2s;
+        }
+        
+        .load-more-btn:hover {
+            background: #3d3d3d;
+        }
+        
+        .load-more-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
         .nav-tabs {
             border-bottom: 1px solid #2d2d2d;
         }
@@ -187,9 +317,153 @@
         .badge-visible {
             display: inline-block;
         }
+        
+        .profile-pic-preview {
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .profile-pic-preview:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+        }
+        
+        /* Fullscreen Image Modal */
+        .fullscreen-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        
+        .fullscreen-modal.show {
+            display: flex;
+        }
+        
+        .fullscreen-image-container {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+        }
+        
+        .fullscreen-image-container.dragging {
+            cursor: grabbing;
+        }
+        
+        .fullscreen-modal img {
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+            transition: transform 0.1s ease-out;
+            transform-origin: center center;
+            -webkit-user-drag: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        
+        .fullscreen-close {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            font-size: 40px;
+            color: #fff;
+            cursor: pointer;
+            z-index: 10000;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+        
+        .fullscreen-close:hover {
+            opacity: 1;
+        }
+        
+        .zoom-controls {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 10000;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 10px 15px;
+            border-radius: 30px;
+        }
+        
+        .zoom-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+        
+        .zoom-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .zoom-level {
+            color: #fff;
+            font-size: 14px;
+            min-width: 50px;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .zoom-hint {
+            position: absolute;
+            bottom: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 12px;
+            z-index: 10000;
+        }
     </style>
 </head>
 <body>
+    <!-- Fullscreen Image Modal -->
+    <div class="fullscreen-modal" id="fullscreenModal">
+        <span class="fullscreen-close" onclick="closeFullscreen()">&times;</span>
+        <div class="fullscreen-image-container" id="imageContainer">
+            <img src="" alt="Full size profile picture" id="fullscreenImage">
+        </div>
+        <div class="zoom-hint">Scroll to zoom • Drag to pan • Double-click to reset</div>
+        <div class="zoom-controls">
+            <button class="zoom-btn" onclick="zoomOut()" title="Zoom Out">
+                <i class="bi bi-dash-lg"></i>
+            </button>
+            <span class="zoom-level" id="zoomLevel">100%</span>
+            <button class="zoom-btn" onclick="zoomIn()" title="Zoom In">
+                <i class="bi bi-plus-lg"></i>
+            </button>
+            <button class="zoom-btn" onclick="resetZoom()" title="Reset">
+                <i class="bi bi-arrow-counterclockwise"></i>
+            </button>
+        </div>
+    </div>
+
     <!-- Navbar -->
     <nav class="navbar">
         <div class="container">
@@ -254,7 +528,8 @@
                                     <div class="card-body">
                                         <div class="row align-items-center">
                                             <div class="col-md-3 text-center mb-3 mb-md-0">
-                                                <img src="" alt="Profile" class="profile-pic-preview mb-2" id="profilePic">
+                                                <img src="" alt="Profile" class="profile-pic-preview mb-2" id="profilePic" 
+                                                     onclick="openFullscreen(this.src)" title="Click to view full size">
                                                 <div><strong id="profileUsername"></strong></div>
                                                 <small class="text-muted" id="profileFullname"></small>
                                             </div>
@@ -341,6 +616,21 @@
                                         </div>
                                     </div>
                                 </div>
+                                
+                                <!-- Posts Grid Section -->
+                                <div class="result-card posts-section" id="postsSection">
+                                    <div class="posts-header">
+                                        <h6 class="mb-0"><i class="bi bi-grid-3x3 me-2"></i>Recent Posts</h6>
+                                        <small class="text-muted"><span id="loadedPostsCount">0</span> / <span id="totalPostsCount">0</span> posts</small>
+                                    </div>
+                                    <div class="posts-grid" id="postsGrid">
+                                        <!-- Posts will be loaded here -->
+                                    </div>
+                                    <button class="load-more-btn" id="loadMoreBtn" onclick="loadMorePosts()" style="display: none;">
+                                        <span class="spinner-border spinner-border-sm me-2 d-none" id="loadMoreSpinner"></span>
+                                        Load More Posts
+                                    </button>
+                                </div>
                             </div>
 
                             <!-- Post Link Tab -->
@@ -382,19 +672,194 @@
     <script>
         const API_BASE = window.location.origin;
         let currentUsername = '';
+        let loadedPosts = [];
+        let totalPostCount = 0;
+        let postsPerLoad = 12;
+
+        // Extract username from Instagram URL
+        function extractUsername(input) {
+            input = input.trim();
+            
+            // Remove @ if present at the start
+            if (input.startsWith('@')) {
+                return input.substring(1);
+            }
+            
+            // Check if it's an Instagram URL
+            const urlPatterns = [
+                /(?:https?:\/\/)?(?:www\.)?instagram\.com\/([a-zA-Z0-9._]+)\/?(?:\?.*)?$/,
+                /(?:https?:\/\/)?(?:www\.)?instagr\.am\/([a-zA-Z0-9._]+)\/?(?:\?.*)?$/
+            ];
+            
+            for (const pattern of urlPatterns) {
+                const match = input.match(pattern);
+                if (match && match[1]) {
+                    // Exclude reserved paths
+                    const reserved = ['p', 'reel', 'reels', 'stories', 'explore', 'accounts', 'direct', 'tv'];
+                    if (!reserved.includes(match[1].toLowerCase())) {
+                        return match[1];
+                    }
+                }
+            }
+            
+            // Return as-is if no URL pattern matched (assume it's a username)
+            return input;
+        }
+
+        // Zoom state
+        let currentZoom = 1;
+        let translateX = 0;
+        let translateY = 0;
+        let isDragging = false;
+        let startX = 0;
+        let startY = 0;
+
+        // Fullscreen modal functions
+        function openFullscreen(src) {
+            const modal = document.getElementById('fullscreenModal');
+            const img = document.getElementById('fullscreenImage');
+            img.src = src;
+            resetZoom();
+            modal.classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeFullscreen() {
+            const modal = document.getElementById('fullscreenModal');
+            modal.classList.remove('show');
+            document.body.style.overflow = '';
+            resetZoom();
+        }
+
+        function updateTransform() {
+            const img = document.getElementById('fullscreenImage');
+            img.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentZoom})`;
+            document.getElementById('zoomLevel').textContent = Math.round(currentZoom * 100) + '%';
+        }
+
+        function zoomIn() {
+            if (currentZoom < 5) {
+                currentZoom = Math.min(5, currentZoom + 0.25);
+                updateTransform();
+            }
+        }
+
+        function zoomOut() {
+            if (currentZoom > 0.25) {
+                currentZoom = Math.max(0.25, currentZoom - 0.25);
+                // Constrain pan when zooming out
+                if (currentZoom <= 1) {
+                    translateX = 0;
+                    translateY = 0;
+                }
+                updateTransform();
+            }
+        }
+
+        function resetZoom() {
+            currentZoom = 1;
+            translateX = 0;
+            translateY = 0;
+            updateTransform();
+        }
+
+        // Mouse wheel zoom
+        document.getElementById('fullscreenModal').addEventListener('wheel', (e) => {
+            e.preventDefault();
+            if (e.deltaY < 0) {
+                zoomIn();
+            } else {
+                zoomOut();
+            }
+        }, { passive: false });
+
+        // Drag to pan
+        const imageContainer = document.getElementById('imageContainer');
+        
+        imageContainer.addEventListener('mousedown', (e) => {
+            if (e.target.tagName === 'IMG' && currentZoom > 1) {
+                isDragging = true;
+                startX = e.clientX - translateX;
+                startY = e.clientY - translateY;
+                imageContainer.classList.add('dragging');
+                e.preventDefault();
+            }
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                translateX = e.clientX - startX;
+                translateY = e.clientY - startY;
+                updateTransform();
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+            imageContainer.classList.remove('dragging');
+        });
+
+        // Double-click to reset
+        imageContainer.addEventListener('dblclick', (e) => {
+            if (e.target.tagName === 'IMG') {
+                resetZoom();
+            }
+        });
+
+        // Click outside image to close
+        imageContainer.addEventListener('click', (e) => {
+            if (e.target === imageContainer && !isDragging) {
+                closeFullscreen();
+            }
+        });
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeFullscreen();
+            }
+            // Keyboard shortcuts for zoom
+            const modal = document.getElementById('fullscreenModal');
+            if (modal.classList.contains('show')) {
+                if (e.key === '+' || e.key === '=') {
+                    zoomIn();
+                } else if (e.key === '-') {
+                    zoomOut();
+                } else if (e.key === '0') {
+                    resetZoom();
+                }
+            }
+        });
 
         // Get Profile Info
         document.getElementById('getProfileBtn').addEventListener('click', getProfile);
         document.getElementById('username').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') getProfile();
         });
+        
+        // Auto-extract username when pasting
+        document.getElementById('username').addEventListener('paste', (e) => {
+            setTimeout(() => {
+                const input = document.getElementById('username');
+                const extracted = extractUsername(input.value);
+                if (extracted !== input.value) {
+                    input.value = extracted;
+                    showStatus(`Username extracted: @${extracted}`, 'info');
+                }
+            }, 0);
+        });
 
         async function getProfile() {
-            const username = document.getElementById('username').value.trim().replace('@', '');
+            const rawInput = document.getElementById('username').value;
+            const username = extractUsername(rawInput);
+            
             if (!username) {
-                showStatus('Please enter a username', 'warning');
+                showStatus('Please enter a username or Instagram profile URL', 'warning');
                 return;
             }
+            
+            // Update input field with extracted username
+            document.getElementById('username').value = username;
 
             currentUsername = username;
             const btn = document.getElementById('getProfileBtn');
@@ -417,7 +882,7 @@
                 document.getElementById('profilePic').src = `${API_BASE}/download/profile-pic/${data.username}?url_only=false`;
                 document.getElementById('profileUsername').textContent = '@' + data.username;
                 document.getElementById('profileFullname').textContent = data.full_name || '';
-                document.getElementById('profileBio').textContent = data.biography || 'No bio';
+                document.getElementById('profileBio').textContent = data.biography || 'No bio';  // pre-wrap CSS preserves line breaks
                 document.getElementById('followers').textContent = formatNumber(data.followers);
                 document.getElementById('following').textContent = formatNumber(data.following);
                 document.getElementById('postCount').textContent = formatNumber(data.post_count);
@@ -429,16 +894,152 @@
                 document.getElementById('profileCard').classList.add('show');
                 document.getElementById('downloadOptions').classList.add('show');
                 
+                // Store total post count and load posts if not private
+                totalPostCount = data.post_count;
+                document.getElementById('totalPostsCount').textContent = data.post_count;
+                
+                if (!data.is_private && data.post_count > 0) {
+                    document.getElementById('postsSection').classList.add('show');
+                    loadedPosts = [];
+                    document.getElementById('postsGrid').innerHTML = '';
+                    await loadPosts();
+                } else {
+                    document.getElementById('postsSection').classList.remove('show');
+                }
+                
                 showStatus('Profile loaded successfully!', 'success');
 
             } catch (error) {
                 showStatus(error.message, 'danger');
                 document.getElementById('profileCard').classList.remove('show');
                 document.getElementById('downloadOptions').classList.remove('show');
+                document.getElementById('postsSection').classList.remove('show');
             } finally {
                 btn.disabled = false;
                 spinner.classList.remove('show');
                 icon.style.display = 'inline';
+            }
+        }
+
+        // Load posts from API
+        async function loadPosts() {
+            try {
+                const response = await fetch(`${API_BASE}/profile/${currentUsername}/posts?max_posts=${postsPerLoad}`);
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    console.error('Failed to load posts:', data.detail);
+                    return;
+                }
+                
+                loadedPosts = data.posts;
+                renderPosts(data.posts);
+                document.getElementById('loadedPostsCount').textContent = loadedPosts.length;
+                
+                // Show/hide load more button (API currently returns max 50 at once)
+                if (loadedPosts.length < totalPostCount && loadedPosts.length < 50) {
+                    document.getElementById('loadMoreBtn').style.display = 'block';
+                } else {
+                    document.getElementById('loadMoreBtn').style.display = 'none';
+                }
+                
+            } catch (error) {
+                console.error('Error loading posts:', error);
+            }
+        }
+        
+        async function loadMorePosts() {
+            const btn = document.getElementById('loadMoreBtn');
+            const spinner = document.getElementById('loadMoreSpinner');
+            
+            btn.disabled = true;
+            spinner.classList.remove('d-none');
+            
+            try {
+                const newMax = Math.min(loadedPosts.length + postsPerLoad, 50);
+                const response = await fetch(`${API_BASE}/profile/${currentUsername}/posts?max_posts=${newMax}`);
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Failed to load more posts');
+                }
+                
+                // Get only new posts
+                const newPosts = data.posts.slice(loadedPosts.length);
+                loadedPosts = data.posts;
+                renderPosts(newPosts, true);
+                document.getElementById('loadedPostsCount').textContent = loadedPosts.length;
+                
+                // Hide button if we've loaded all or reached max
+                if (loadedPosts.length >= totalPostCount || loadedPosts.length >= 50) {
+                    btn.style.display = 'none';
+                }
+                
+            } catch (error) {
+                showStatus(error.message, 'danger');
+            } finally {
+                btn.disabled = false;
+                spinner.classList.add('d-none');
+            }
+        }
+        
+        function getThumbnailSrc(url) {
+            return `${API_BASE}/proxy/thumbnail?url=${encodeURIComponent(url)}`;
+        }
+
+        function renderPosts(posts, append = false) {
+            const grid = document.getElementById('postsGrid');
+            if (!append) {
+                grid.innerHTML = '';
+            }
+            
+            posts.forEach(post => {
+                const postEl = document.createElement('div');
+                postEl.className = 'post-item';
+                postEl.innerHTML = `
+                    <img src="${getThumbnailSrc(post.thumbnail_url)}" alt="Post" loading="lazy" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%232d2d2d%22 width=%22100%22 height=%22100%22/><text x=%2250%22 y=%2250%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23666%22 font-size=%2212%22>No image</text></svg>'">
+                    ${post.is_video ? '<span class="post-type-badge"><i class="bi bi-play-circle-fill"></i></span>' : ''}
+                    <div class="post-overlay">
+                        <div class="post-stats">
+                            <span><i class="bi bi-heart-fill"></i> ${formatNumber(post.likes)}</span>
+                            <span><i class="bi bi-chat-fill"></i> ${formatNumber(post.comments)}</span>
+                        </div>
+                        <button class="post-download-btn" onclick="event.stopPropagation(); downloadSinglePost('${post.shortcode}', this)">
+                            <i class="bi bi-download"></i> Download
+                        </button>
+                    </div>
+                `;
+                
+                // Click to open in new tab
+                postEl.addEventListener('click', () => {
+                    window.open(post.post_url, '_blank');
+                });
+                
+                // Click on image to view fullscreen
+                const img = postEl.querySelector('img');
+                img.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openFullscreen(getThumbnailSrc(post.thumbnail_url));
+                });
+                
+                grid.appendChild(postEl);
+            });
+        }
+        
+        async function downloadSinglePost(shortcode, btn) {
+            const url = `${API_BASE}/download/post?url=${encodeURIComponent(shortcode)}`;
+            const originalHtml = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Preparing...';
+            }
+            try {
+                await downloadFile(url, null, `${shortcode}`);
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml || '<i class="bi bi-download"></i> Download';
+                }
             }
         }
 
@@ -499,8 +1100,8 @@
         }
 
         async function downloadFile(url, spinnerId, defaultFilename) {
-            const spinner = document.getElementById(spinnerId);
-            spinner.classList.remove('d-none');
+            const spinner = spinnerId ? document.getElementById(spinnerId) : null;
+            if (spinner) spinner.classList.remove('d-none');
             showStatus('Downloading... This may take a while for large accounts.', 'info');
 
             try {
@@ -534,7 +1135,7 @@
             } catch (error) {
                 showStatus(error.message, 'danger');
             } finally {
-                spinner.classList.add('d-none');
+                if (spinner) spinner.classList.add('d-none');
             }
         }
 

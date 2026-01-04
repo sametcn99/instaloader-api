@@ -4,6 +4,8 @@ import os
 import re
 import shutil
 import logging
+import random
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Generator
@@ -56,6 +58,86 @@ class InstaService:
             request_timeout=60,
             quiet=True,
         )
+        # Harden requests with custom UA and optional session to reduce 401/429s
+        user_agent = settings.IG_USER_AGENT or (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+        )
+        self.loader.context._default_user_agent = user_agent
+        self.loader.context._session.headers.update(
+            {
+                "User-Agent": user_agent,
+                "Referer": "https://www.instagram.com/",
+                "Accept-Language": "en-US,en;q=0.9",
+            }
+        )
+
+        sessionid = settings.IG_SESSIONID
+        if sessionid:
+            self.loader.context._session.cookies.set(
+                "sessionid", sessionid, domain=".instagram.com"
+            )
+            self.loader.context._session.cookies.set(
+                "sessionid", sessionid, domain="www.instagram.com"
+            )
+
+        self._proxy_cycle = self._build_proxy_cycle(settings.PROXIES)
+        if self._proxy_cycle:
+            self._apply_next_proxy()
+
+    def _build_proxy_cycle(self, proxies: list[str]):
+        """Return an endless cycle over proxies; empty list returns None."""
+        if not proxies:
+            return None
+        return iter(proxies * 1000)  # simple deterministic cycle without itertools
+
+    def _apply_next_proxy(self):
+        """Rotate proxy for the session if pool is configured."""
+        if not self._proxy_cycle:
+            return
+        try:
+            proxy = next(self._proxy_cycle)
+            if proxy:
+                self.loader.context._session.proxies.update({
+                    "http": proxy,
+                    "https": proxy,
+                })
+                logger.info(f"Using proxy: {proxy}")
+        except StopIteration:
+            pass
+
+    def _with_backoff(self, func, *args, **kwargs):
+        """Execute func with retry/backoff and proxy rotation on failure."""
+        attempts = settings.PROXY_RETRY_MAX
+        base = settings.PROXY_BACKOFF_BASE
+        jitter = settings.PROXY_BACKOFF_JITTER
+
+        for attempt in range(1, attempts + 1):
+            try:
+                return func(*args, **kwargs)
+            except ConnectionException as e:
+                # Treat Instagram throttle as rate limit
+                msg = str(e)
+                if "429" in msg or "Please wait a few minutes" in msg:
+                    if attempt == attempts:
+                        raise RateLimitError()
+                    sleep_for = base ** attempt + random.uniform(0, jitter)
+                    logger.warning(
+                        f"Rate limited (attempt {attempt}/{attempts}); backing off {sleep_for:.2f}s"
+                    )
+                    time.sleep(sleep_for)
+                    if settings.PROXY_ROTATION:
+                        self._apply_next_proxy()
+                    continue
+                if attempt == attempts:
+                    raise DownloadError(f"Connection error: {msg}")
+                sleep_for = base ** attempt + random.uniform(0, jitter)
+                time.sleep(sleep_for)
+                if settings.PROXY_ROTATION:
+                    self._apply_next_proxy()
+            except Exception:
+                raise
+        raise DownloadError("Unable to complete request after retries")
     
     def get_profile(self, username: str) -> Profile:
         """
@@ -72,14 +154,14 @@ class InstaService:
             ProfileSuspendedError: If profile is suspended
         """
         try:
-            profile = Profile.from_username(self.loader.context, username)
+            profile = self._with_backoff(Profile.from_username, self.loader.context, username)
             return profile
         except ProfileNotExistsException:
             raise UserNotFoundError(username)
         except QueryReturnedBadRequestException:
             raise ProfileSuspendedError(username)
         except ConnectionException as e:
-            if "429" in str(e):
+            if "429" in str(e) or "Please wait a few minutes" in str(e):
                 raise RateLimitError()
             raise DownloadError(f"Connection error: {str(e)}")
     
@@ -119,7 +201,7 @@ class InstaService:
         posts_list = []
         
         try:
-            posts = profile.get_posts()
+            posts = self._with_backoff(profile.get_posts)
             count = 0
             
             for post in posts:
@@ -255,7 +337,7 @@ class InstaService:
         posts_metadata = []
         
         try:
-            posts = profile.get_posts()
+            posts = self._with_backoff(profile.get_posts)
             count = 0
             
             for post in posts:
@@ -292,13 +374,13 @@ class InstaService:
         shortcode = self._extract_shortcode(url_or_shortcode)
 
         try:
-            post = Post.from_shortcode(self.loader.context, shortcode)
+            post = self._with_backoff(Post.from_shortcode, self.loader.context, shortcode)
         except PrivateProfileNotFollowedException:
             raise PrivateProfileError("This profile")
         except ProfileNotExistsException:
             raise DownloadError("Post not found or unreachable.")
         except ConnectionException as e:
-            if "429" in str(e):
+            if "429" in str(e) or "Please wait a few minutes" in str(e):
                 raise RateLimitError()
             raise DownloadError(f"Connection error: {str(e)}")
 

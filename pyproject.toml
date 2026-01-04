@@ -16,6 +16,7 @@ dependencies = [
     "aiofiles>=25.1.0",
     "pydantic>=2.5.3",
     "pydantic-settings>=2.0.0",
+    "slowapi>=0.1.9",
 ]
 
 [project.optional-dependencies]

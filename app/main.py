@@ -10,6 +10,10 @@ from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+
 from app.config import settings
 from app.routes.download import router as download_router
 from app.exceptions import InstagramDownloaderError
@@ -25,6 +29,40 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _get_client_ip(request: Request) -> str:
+    """Extract client IP from X-Forwarded-For or client info."""
+    x_forwarded_for = request.headers.get("X-Forwarded-For")
+    if x_forwarded_for:
+        # first entry is the original client
+        return x_forwarded_for.split(",")[0].strip()
+    if request.client and request.client.host:
+        return request.client.host
+    return "unknown"
+
+
+def _rate_limit_string() -> str:
+    """Build a limits-compatible rate limit string using configured seconds."""
+    reqs = settings.RATE_LIMIT_REQUESTS
+    period = settings.RATE_LIMIT_PERIOD
+
+    # Common buckets supported by limits: second/minute/hour/day
+    if period == 1:
+        return f"{reqs}/second"
+    if period == 60:
+        return f"{reqs}/minute"
+    if period == 3600:
+        return f"{reqs}/hour"
+    if period == 86400:
+        return f"{reqs}/day"
+
+    # Fallback: express as N seconds (limits accepts plural form)
+    return f"{reqs}/{period} seconds"
+
+
+rate_limit = _rate_limit_string()
+limiter = Limiter(key_func=_get_client_ip, default_limits=[rate_limit])
 
 
 @asynccontextmanager
@@ -53,6 +91,9 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
+# Attach rate limiter
+app.state.limiter = limiter
+
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -61,6 +102,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Rate limit middleware
+app.add_middleware(SlowAPIMiddleware)
 
 
 # Exception handlers
@@ -84,6 +128,22 @@ async def instagram_exception_handler(request: Request, exc: InstagramDownloader
             "error_code": error_codes.get(exc.status_code, "UNKNOWN_ERROR"),
             "timestamp": datetime.now().isoformat(),
         }
+    )
+
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded):
+    """Return a consistent JSON response when a client is throttled."""
+    base_response = _rate_limit_exceeded_handler(request, exc)
+    return JSONResponse(
+        status_code=429,
+        content={
+            "success": False,
+            "error": "Rate limit exceeded. Try again later.",
+            "error_code": "RATE_LIMITED",
+            "timestamp": datetime.now().isoformat(),
+        },
+        headers=base_response.headers,
     )
 
 

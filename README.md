@@ -10,7 +10,6 @@ A FastAPI-based wrapper around [Instaloader](https://github.com/instaloader/inst
 - Metadata export for posts (caption, hashtags, likes, comments, location)
 - Temp download isolation per request with scheduled cleanup
 - Configurable limits for posts and request frequency
-- Ready-to-run Docker image and CLI entrypoint (`insta-save`)
 
 ## Requirements
 
@@ -44,8 +43,8 @@ Set environment variables or a `.env` file (loaded automatically). Key options:
 | `INSTAGRAM_USERNAME`       | None                 | Instagram username for login                    |
 | `INSTAGRAM_PASSWORD`       | None                 | Instagram password for login                    |
 | `INSTAGRAM_SESSION_FILE`   | None                 | Path to saved Instaloader session file          |
-| `RATE_LIMIT_REQUESTS`      | 10                   | Requests allowed per period                     |
-| `RATE_LIMIT_PERIOD`        | 60                   | Rate limit window in seconds                    |
+| `RATE_LIMIT_REQUESTS`      | 10                   | Requests allowed per period (per client IP)     |
+| `RATE_LIMIT_PERIOD`        | 60                   | Rate limit window in seconds (per client IP)    |
 | `AUTO_CLEANUP`             | true                 | Enable background cleanup of temp folders       |
 | `CLEANUP_AFTER_SECONDS`    | 300                  | Delay before temp folders are removed           |
 
@@ -58,6 +57,12 @@ INSTAGRAM_PASSWORD=your_password
 # or use a session file instead of credentials
 INSTAGRAM_SESSION_FILE=/path/to/session
 ```
+
+## Rate Limiting
+
+- Limits are enforced per client IP, not shared across the server.
+- When behind a proxy/load balancer, the first entry in `X-Forwarded-For` is used to identify the client; otherwise `request.client.host` is used.
+- Tune limits via `RATE_LIMIT_REQUESTS` and `RATE_LIMIT_PERIOD` (seconds).
 
 ## Running with Docker
 
@@ -81,6 +86,8 @@ Base URL: `http://localhost:8000`
 | --- | --- | --- |
 | GET | `/health` | Health check |
 | GET | `/profile/{username}` | Profile info (public; private requires login) |
+| GET | `/profile/{username}/posts` | List recent posts with metadata and thumbnails |
+| GET | `/proxy/thumbnail` | Backend proxy for Instagram CDN thumbnails |
 | GET | `/download/all/{username}` | Download profile pic, posts as one ZIP |
 | GET | `/download/posts/{username}` | Download posts only (ZIP) |
 | GET | `/download/profile-pic/{username}` | Download profile picture or return URL |
@@ -139,46 +146,3 @@ Download a single post by link (returns file if one media, ZIP if multiple):
 curl -L -o post.bin \
   "http://localhost:8000/download/post?url=https://www.instagram.com/p/POSTCODE/"
 ```
-
-Add `include_metadata=false` to skip `metadata.txt` inside ZIPs.
-```
-
-## Responses and Headers
-
-- Download endpoints return ZIP files (or images for profile pictures). Numeric stats are exposed via `X-Download-Stats-*` and `X-Download-Time-Seconds` headers when available.
-- Errors follow `ErrorResponse` with fields `success`, `error`, `error_code`, and `timestamp`.
-
-## Authentication Notes
-
-- Public data (public profiles, public posts) may work without login. Private profiles, and rate-limit avoidance require either credentials or a session file.
-- For session files, use Instaloader locally: `instaloader --login YOUR_USER --sessionfile session`.
-
-## Cleanup Behavior
-
-- Each request writes to a unique subfolder under `DOWNLOAD_DIR`.
-- When `AUTO_CLEANUP` is true, folders and generated ZIPs are deleted after `CLEANUP_AFTER_SECONDS` via a background thread.
-
-## Project Layout
-
-- `app/main.py` FastAPI app and exception handlers
-- `app/routes/download.py` HTTP routes
-- `app/services/insta_service.py` Instaloader integration and business logic
-- `app/utils/zip_utils.py` ZIP helpers and temp dir management
-- `app/models.py` Pydantic request/response schemas
-- `Dockerfile` Container build
-- `pyproject.toml` Project metadata and dependencies
-
-## Development and Testing
-
-Install dev deps and run tests:
-
-```bash
-pip install -e .[dev]
-pytest
-```
-
-## Troubleshooting
-
-- **429 / rate limited**: Provide login credentials or session; reduce request frequency.
-- **Private profiles**: Require authenticated session that follows the target account.
-- **Downloads empty**: Check `max_posts` and that the profile actually has posts.

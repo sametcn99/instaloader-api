@@ -70,7 +70,6 @@ async def instagram_exception_handler(request: Request, exc: InstagramDownloader
     error_codes = {
         404: "USER_NOT_FOUND",
         403: "PRIVATE_PROFILE",
-        401: "LOGIN_REQUIRED",
         429: "RATE_LIMITED",
         410: "PROFILE_SUSPENDED",
         500: "DOWNLOAD_ERROR",

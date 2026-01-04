@@ -1,10 +1,10 @@
 # Instaloader API
 
-A FastAPI-based wrapper around [Instaloader](https://github.com/instaloader/instaloader) that downloads Instagram profile content (posts, stories, and profile pictures) and serves it as ZIP archives. Includes optional authentication, simple rate handling, and automatic cleanup of temporary downloads.
+A FastAPI-based wrapper around [Instaloader](https://github.com/instaloader/instaloader) that downloads Instagram profile content (posts, and profile pictures) and serves it as ZIP archives. Includes optional authentication, simple rate handling, and automatic cleanup of temporary downloads.
 
 ## Features
 
-- Download profile posts, stories (login required), and profile pictures as ZIPs
+- Download profile posts, and profile pictures as ZIPs
 - Download single posts by link/shortcode (returns raw file if one item, ZIP if carousel)
 - Profile info lookup with follower counts and verification flag
 - Metadata export for posts (caption, hashtags, likes, comments, location)
@@ -15,7 +15,6 @@ A FastAPI-based wrapper around [Instaloader](https://github.com/instaloader/inst
 ## Requirements
 
 - Python 3.11+
-- An Instagram session file **or** username/password (needed for private profiles and stories)
 - `instaloader` download prerequisites (network access to Instagram)
 
 ## Quick Start (local)
@@ -82,9 +81,8 @@ Base URL: `http://localhost:8000`
 | --- | --- | --- |
 | GET | `/health` | Health check |
 | GET | `/profile/{username}` | Profile info (public; private requires login) |
-| GET | `/download/all/{username}` | Download profile pic, posts, stories as one ZIP |
+| GET | `/download/all/{username}` | Download profile pic, posts as one ZIP |
 | GET | `/download/posts/{username}` | Download posts only (ZIP) |
-| GET | `/download/stories/{username}` | Download active stories (ZIP; login required) |
 | GET | `/download/profile-pic/{username}` | Download profile picture or return URL |
 | GET | `/download/post` | Download a single post by link/shortcode (file or ZIP) |
 
@@ -122,13 +120,6 @@ curl -L -o instagram_posts.zip \
   "http://localhost:8000/download/posts/instagram?max_posts=25"
 ```
 
-Download stories (requires login/session):
-
-```bash
-curl -L -o instagram_stories.zip \
-  "http://localhost:8000/download/stories/instagram"
-```
-
 Download profile picture file:
 
 ```bash
@@ -159,7 +150,7 @@ Add `include_metadata=false` to skip `metadata.txt` inside ZIPs.
 
 ## Authentication Notes
 
-- Public data (public profiles, public posts) may work without login. Private profiles, stories, and rate-limit avoidance require either credentials or a session file.
+- Public data (public profiles, public posts) may work without login. Private profiles, and rate-limit avoidance require either credentials or a session file.
 - For session files, use Instaloader locally: `instaloader --login YOUR_USER --sessionfile session`.
 
 ## Cleanup Behavior
@@ -190,5 +181,4 @@ pytest
 
 - **429 / rate limited**: Provide login credentials or session; reduce request frequency.
 - **Private profiles**: Require authenticated session that follows the target account.
-- **Stories**: Only downloadable when logged in; ensure `INSTAGRAM_USERNAME` and session are valid.
-- **Downloads empty**: Check `max_posts` and that the profile actually has posts/stories.
+- **Downloads empty**: Check `max_posts` and that the profile actually has posts.

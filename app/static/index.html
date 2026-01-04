@@ -212,7 +212,7 @@
         <!-- Header -->
         <div class="text-center mb-4">
             <h4 class="mb-2">Download Instagram Content</h4>
-            <p class="text-muted small">Download posts, stories, and profile pictures</p>
+            <p class="text-muted small">Download posts and profile pictures</p>
         </div>
 
         <!-- Main Card -->
@@ -285,7 +285,7 @@
                                                         <i class="bi bi-collection"></i>
                                                     </div>
                                                     <h6>All Content</h6>
-                                                    <p class="text-muted small mb-2">Posts, stories & profile picture</p>
+                                                    <p class="text-muted small mb-2">Posts & profile picture</p>
                                                     <div class="mb-2">
                                                         <input type="number" class="form-control form-control-sm" 
                                                                id="maxPostsAll" placeholder="Max posts (optional)" min="1" max="1000">
@@ -314,24 +314,6 @@
                                                     <button class="btn btn-primary btn-sm w-100" onclick="downloadPosts()">
                                                         <span class="spinner-border spinner-border-sm me-1 d-none" id="spinnerPosts"></span>
                                                         <i class="bi bi-download me-1"></i>Download Posts
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <!-- Download Stories -->
-                                        <div class="col-md-6">
-                                            <div class="card h-100">
-                                                <div class="card-body">
-                                                    <div class="feature-icon mx-auto">
-                                                        <i class="bi bi-circle"></i>
-                                                    </div>
-                                                    <h6>Stories</h6>
-                                                    <p class="text-muted small mb-2">Current active stories</p>
-                                                    <small class="text-warning d-block mb-2"><i class="bi bi-info-circle me-1"></i>Requires login</small>
-                                                    <button class="btn btn-primary btn-sm w-100" onclick="downloadStories()">
-                                                        <span class="spinner-border spinner-border-sm me-1 d-none" id="spinnerStories"></span>
-                                                        <i class="bi bi-download me-1"></i>Download Stories
                                                     </button>
                                                 </div>
                                             </div>
@@ -473,11 +455,6 @@
             let url = `${API_BASE}/download/posts/${currentUsername}`;
             if (maxPosts) url += `?max_posts=${maxPosts}`;
             await downloadFile(url, 'spinnerPosts', `${currentUsername}_posts.zip`);
-        }
-
-        async function downloadStories() {
-            const url = `${API_BASE}/download/stories/${currentUsername}`;
-            await downloadFile(url, 'spinnerStories', `${currentUsername}_stories.zip`);
         }
 
         async function downloadProfilePic() {

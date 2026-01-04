@@ -9,7 +9,6 @@ class ContentType(str, Enum):
     """Types of content that can be downloaded."""
     ALL = "all"
     POSTS = "posts"
-    STORIES = "stories"
     PROFILE_PIC = "profile_pic"
 
 
@@ -84,7 +83,6 @@ class DownloadStats(BaseModel):
     username: str
     content_type: ContentType
     total_posts: int = 0
-    total_stories: int = 0
     profile_pic_included: bool = False
     total_files: int = 0
     zip_size_bytes: int = 0

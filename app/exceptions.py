@@ -6,7 +6,6 @@ __all__ = [
     "PrivateProfileError",
     "ProfileSuspendedError",
     "RateLimitError",
-    "LoginRequiredError",
     "DownloadError",
     "NoContentError",
     "TimeoutError",
@@ -33,11 +32,11 @@ class UserNotFoundError(InstagramDownloaderError):
 
 
 class PrivateProfileError(InstagramDownloaderError):
-    """Raised when trying to access a private profile without authentication."""
+    """Raised when trying to access a private profile."""
     
     def __init__(self, username: str):
         super().__init__(
-            message=f"'{username}' profile is private. You need to log in to access this content.",
+            message=f"'{username}' profile is private and cannot be accessed.",
             status_code=403
         )
 
@@ -59,16 +58,6 @@ class RateLimitError(InstagramDownloaderError):
         super().__init__(
             message="Instagram API rate limit exceeded. Please wait a while and try again.",
             status_code=429
-        )
-
-
-class LoginRequiredError(InstagramDownloaderError):
-    """Raised when login is required for an operation."""
-    
-    def __init__(self, operation: str = "this operation"):
-        super().__init__(
-            message=f"You need to log in to Instagram for '{operation}'.",
-            status_code=401
         )
 
 

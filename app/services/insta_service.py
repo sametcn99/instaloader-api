@@ -11,11 +11,10 @@ from contextlib import contextmanager
 import threading
 
 import instaloader
-from instaloader import Profile, Post, StoryItem
+from instaloader import Profile, Post
 from instaloader.exceptions import (
     ProfileNotExistsException,
     PrivateProfileNotFollowedException,
-    LoginRequiredException,
     ConnectionException,
     QueryReturnedBadRequestException,
 )
@@ -26,7 +25,6 @@ from app.exceptions import (
     PrivateProfileError,
     ProfileSuspendedError,
     RateLimitError,
-    LoginRequiredError,
     DownloadError,
     NoContentError,
 )
@@ -58,37 +56,6 @@ class InstaService:
             request_timeout=60,
             quiet=True,
         )
-        
-        # Try to load session if credentials are provided
-        self._try_login()
-    
-    def _try_login(self) -> bool:
-        """Attempt to login with provided credentials."""
-        if settings.INSTAGRAM_SESSION_FILE and Path(settings.INSTAGRAM_SESSION_FILE).exists():
-            try:
-                self.loader.load_session_from_file(
-                    settings.INSTAGRAM_USERNAME or "",
-                    settings.INSTAGRAM_SESSION_FILE
-                )
-                logger.info("Session loaded successfully")
-                return True
-            except Exception as e:
-                logger.warning(f"Failed to load session: {e}")
-        
-        if settings.INSTAGRAM_USERNAME and settings.INSTAGRAM_PASSWORD:
-            try:
-                self.loader.login(settings.INSTAGRAM_USERNAME, settings.INSTAGRAM_PASSWORD)
-                logger.info("Login successful")
-                return True
-            except Exception as e:
-                logger.warning(f"Login failed: {e}")
-        
-        return False
-    
-    @property
-    def is_logged_in(self) -> bool:
-        """Check if currently logged in."""
-        return self.loader.context.is_logged_in
     
     def get_profile(self, username: str) -> Profile:
         """
@@ -217,7 +184,7 @@ class InstaService:
         """
         profile = self.get_profile(username)
         
-        if profile.is_private and not self.is_logged_in:
+        if profile.is_private:
             raise PrivateProfileError(username)
         
         target_dir.mkdir(parents=True, exist_ok=True)
@@ -244,8 +211,6 @@ class InstaService:
                     
         except PrivateProfileNotFollowedException:
             raise PrivateProfileError(username)
-        except LoginRequiredException:
-            raise LoginRequiredError("downloading posts")
         except ConnectionException as e:
             if "429" in str(e):
                 raise RateLimitError()
@@ -266,8 +231,6 @@ class InstaService:
             post = Post.from_shortcode(self.loader.context, shortcode)
         except PrivateProfileNotFollowedException:
             raise PrivateProfileError("This profile")
-        except LoginRequiredException:
-            raise LoginRequiredError("downloading this post")
         except ProfileNotExistsException:
             raise DownloadError("Post not found or unreachable.")
         except ConnectionException as e:
@@ -280,7 +243,7 @@ class InstaService:
         except Exception:
             owner_profile = None
 
-        if owner_profile and owner_profile.is_private and not self.is_logged_in:
+        if owner_profile and owner_profile.is_private:
             raise PrivateProfileError(post.owner_username)
 
         post_folder = target_dir / f"{post.date_local.strftime('%Y-%m-%d')}-{post.shortcode}"
@@ -400,56 +363,6 @@ Video: {"Yes" if metadata.is_video else "No"}
 
         return self._collect_media_files(post_folder)
     
-    def download_stories(
-        self, 
-        username: str, 
-        target_dir: Path
-    ) -> int:
-        """
-        Download current stories from a profile.
-        
-        Args:
-            username: Instagram username
-            target_dir: Directory to save stories
-            
-        Returns:
-            Number of stories downloaded
-        """
-        if not self.is_logged_in:
-            raise LoginRequiredError("downloading stories")
-        
-        profile = self.get_profile(username)
-        target_dir.mkdir(parents=True, exist_ok=True)
-        
-        story_count = 0
-        
-        try:
-            stories = self.loader.get_stories(userids=[profile.userid])
-            
-            for story in stories:
-                for item in story.get_items():
-                    try:
-                        # Create folder with date-id format
-                        item_date = item.date_local
-                        date_str = item_date.strftime("%Y-%m-%d")
-                        story_folder = target_dir / f"{date_str}-{item.mediaid}"
-                        story_folder.mkdir(parents=True, exist_ok=True)
-                        
-                        self.loader.download_storyitem(item, story_folder)
-                        story_count += 1
-                    except Exception as e:
-                        logger.warning(f"Failed to download story item: {e}")
-                        continue
-                        
-        except LoginRequiredException:
-            raise LoginRequiredError("downloading stories")
-        except ConnectionException as e:
-            if "429" in str(e):
-                raise RateLimitError()
-            raise DownloadError(f"Story download error: {str(e)}")
-        
-        return story_count
-    
     def download_all(
         self,
         username: str,
@@ -471,7 +384,6 @@ Video: {"Yes" if metadata.is_video else "No"}
         """
         stats = {
             "posts": 0,
-            "stories": 0,
             "profile_pic": False,
             "errors": []
         }
@@ -497,15 +409,6 @@ Video: {"Yes" if metadata.is_video else "No"}
             stats["errors"].append("Posts: Profile is private")
         except Exception as e:
             stats["errors"].append(f"Posts: {str(e)}")
-        
-        # Download stories (requires login)
-        try:
-            stories_dir = target_dir / "stories"
-            stats["stories"] = self.download_stories(username, stories_dir)
-        except LoginRequiredError:
-            stats["errors"].append("Stories: Login required")
-        except Exception as e:
-            stats["errors"].append(f"Stories: {str(e)}")
         
         return stats
 

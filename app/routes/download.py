@@ -77,7 +77,7 @@ async def get_profile(username: str):
         500: {"model": ErrorResponse}
     },
     summary="Download All Content",
-    description="Downloads profile picture, posts, and stories in a single ZIP file."
+    description="Downloads profile picture and posts in a single ZIP file."
 )
 async def download_all(
     username: str,
@@ -113,7 +113,6 @@ async def download_all(
             filename=f"{username}.zip",
             headers={
                 "X-Download-Stats-Posts": str(stats["posts"]),
-                "X-Download-Stats-Stories": str(stats["stories"]),
                 "X-Download-Stats-ProfilePic": str(stats["profile_pic"]),
                 "X-Download-Time-Seconds": f"{time.time() - start_time:.2f}",
             }
@@ -280,68 +279,6 @@ async def download_post_by_link(
         if temp_dir:
             cleanup_directory(temp_dir)
         logger.exception("Unexpected error during post link download")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get(
-    "/download/stories/{username}",
-    responses={
-        200: {"content": {"application/zip": {}}, "description": "ZIP file"},
-        401: {"model": ErrorResponse},
-        404: {"model": ErrorResponse},
-        500: {"model": ErrorResponse}
-    },
-    summary="Download Stories",
-    description="Downloads user's current stories. You must be logged in to use this feature."
-)
-async def download_stories(
-    username: str,
-    background_tasks: BackgroundTasks,
-):
-    """Download stories from a profile."""
-    start_time = time.time()
-    temp_dir = None
-    
-    try:
-        service = get_insta_service()
-        temp_dir = create_temp_download_dir(username)
-        
-        # Download stories
-        story_count = service.download_stories(
-            username=username,
-            target_dir=temp_dir / "stories"
-        )
-        
-        if story_count == 0:
-            cleanup_directory(temp_dir)
-            raise HTTPException(status_code=404, detail="No active stories found for this user.")
-        
-        # Create ZIP
-        zip_path = create_zip_archive(temp_dir, f"{username}_stories", temp_dir.parent)
-        
-        # Schedule cleanup
-        schedule_cleanup(temp_dir, settings.CLEANUP_AFTER_SECONDS)
-        
-        return FileResponse(
-            path=zip_path,
-            media_type="application/zip",
-            filename=f"{username}_stories.zip",
-            headers={
-                "X-Download-Stats-Stories": str(story_count),
-                "X-Download-Time-Seconds": f"{time.time() - start_time:.2f}",
-            }
-        )
-        
-    except InstagramDownloaderError as e:
-        if temp_dir:
-            cleanup_directory(temp_dir)
-        raise HTTPException(status_code=e.status_code, detail=e.message)
-    except HTTPException:
-        raise
-    except Exception as e:
-        if temp_dir:
-            cleanup_directory(temp_dir)
-        logger.exception("Unexpected error during stories download")
         raise HTTPException(status_code=500, detail=str(e))
 
 

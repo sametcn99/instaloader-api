@@ -18,11 +18,6 @@ class Settings(BaseSettings):
     MAX_CONCURRENT_DOWNLOADS: int = 3
     DOWNLOAD_TIMEOUT: int = 300  # seconds
     
-    # Instaloader settings
-    INSTAGRAM_USERNAME: str | None = None
-    INSTAGRAM_PASSWORD: str | None = None
-    INSTAGRAM_SESSION_FILE: str | None = None
-    
     # Rate limiting
     RATE_LIMIT_REQUESTS: int = 10
     RATE_LIMIT_PERIOD: int = 60  # seconds

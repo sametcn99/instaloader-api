@@ -24,6 +24,13 @@ class Settings(BaseSettings):
     IG_PASSWORD: str | None = None
     IG_USER_AGENT: str | None = None
 
+    # Instagrapi specific settings
+    IG_SESSION_FILE: str | None = None
+    IG_DELAY_RANGE: tuple[int, int] = (1, 3)
+    
+    # Fallback settings - which library to try first
+    IG_PRIMARY_LIBRARY: str = "instaloader"
+
     # Proxy settings (rotate for throttling mitigation)
     PROXIES: list[str] = []
     PROXY_ROTATION: bool = True

@@ -12,11 +12,13 @@ dependencies = [
     "fastapi>=0.109.0",
     "uvicorn[standard]>=0.27.0",
     "instaloader>=4.10.3",
+    "instagrapi>=2.0.0",
     "python-multipart>=0.0.6",
     "aiofiles>=25.1.0",
     "pydantic>=2.5.3",
     "pydantic-settings>=2.0.0",
     "slowapi>=0.1.9",
+    "requests>=2.31.0",
 ]
 
 [project.optional-dependencies]

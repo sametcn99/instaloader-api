@@ -82,6 +82,14 @@ class InstaService:
                 "sessionid", sessionid, domain="www.instagram.com"
             )
 
+        # Login with username/password if provided
+        if settings.IG_USERNAME and settings.IG_PASSWORD:
+            try:
+                self.loader.login(settings.IG_USERNAME, settings.IG_PASSWORD)
+                logger.info(f"Logged in as {settings.IG_USERNAME}")
+            except Exception as e:
+                logger.warning(f"Login failed: {e}")
+
         self._proxy_cycle = self._build_proxy_cycle(settings.PROXIES)
         if self._proxy_cycle:
             self._apply_next_proxy()

@@ -18,12 +18,14 @@ class Settings(BaseSettings):
     MAX_CONCURRENT_DOWNLOADS: int = 3
     DOWNLOAD_TIMEOUT: int = 300  # seconds
 
-    # Instagram auth/headers (optional)
+    # Instagram auth (use either sessionid OR username/password)
     IG_SESSIONID: str | None = None
+    IG_USERNAME: str | None = None
+    IG_PASSWORD: str | None = None
     IG_USER_AGENT: str | None = None
 
     # Proxy settings (rotate for throttling mitigation)
-    PROXIES: list[str] = []  # e.g. ["http://user:pass@host:port", "http://host2:port"]
+    PROXIES: list[str] = []
     PROXY_ROTATION: bool = True
     PROXY_RETRY_MAX: int = 4
     PROXY_BACKOFF_BASE: float = 1.5  # seconds

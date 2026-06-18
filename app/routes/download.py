@@ -21,6 +21,7 @@ from app.models import (
     ErrorResponse,
     SuccessResponse,
     PostListResponse,
+    FollowerListResponse,
 )
 from app.exceptions import InstagramDownloaderError
 from app.services.insta_service import get_insta_service
@@ -137,12 +138,14 @@ async def list_profile_posts(
         500: {"model": ErrorResponse}
     },
     summary="Download All Content",
-    description="Downloads profile picture and posts in a single ZIP file."
+    description="Downloads profile picture, posts, followers and following lists in a single ZIP file."
 )
 async def download_all(
     username: str,
     background_tasks: BackgroundTasks,
     max_posts: Annotated[int | None, Query(ge=1, le=1000, description="Maximum number of posts")] = None,
+    max_followers: Annotated[int | None, Query(ge=1, le=10000, description="Maximum number of followers")] = None,
+    max_following: Annotated[int | None, Query(ge=1, le=10000, description="Maximum number of following")] = None,
     include_metadata: Annotated[bool, Query(description="Include metadata files")] = True,
 ):
     """Download all content from a profile."""
@@ -158,6 +161,8 @@ async def download_all(
             username=username,
             target_dir=temp_dir,
             max_posts=max_posts,
+            max_followers=max_followers,
+            max_following=max_following,
             include_metadata=include_metadata
         )
         
@@ -174,6 +179,8 @@ async def download_all(
             headers={
                 "X-Download-Stats-Posts": str(stats["posts"]),
                 "X-Download-Stats-ProfilePic": str(stats["profile_pic"]),
+                "X-Download-Stats-Followers": str(stats["followers"]),
+                "X-Download-Stats-Following": str(stats["following"]),
                 "X-Download-Time-Seconds": f"{time.time() - start_time:.2f}",
             }
         )
@@ -416,4 +423,184 @@ async def download_profile_pic(
         if temp_dir:
             cleanup_directory(temp_dir)
         logger.exception("Unexpected error during profile pic download")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get(
+    "/download/followers/{username}",
+    response_model=FollowerListResponse,
+    responses={
+        200: {"description": "Followers list"},
+        404: {"model": ErrorResponse},
+        403: {"model": ErrorResponse},
+        500: {"model": ErrorResponse}
+    },
+    summary="Get Followers List",
+    description="Returns list of followers for an Instagram profile."
+)
+async def get_followers(
+    username: str,
+    max_count: Annotated[int | None, Query(ge=1, le=10000, description="Maximum number of followers to return")] = None,
+):
+    """Get followers list for a profile."""
+    try:
+        service = get_insta_service()
+        return service.get_followers(username, max_count=max_count)
+    except InstagramDownloaderError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+    except Exception as e:
+        logger.exception("Unexpected error getting followers")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get(
+    "/download/followers/{username}/file",
+    responses={
+        200: {"content": {"application/zip": {}}, "description": "ZIP file"},
+        404: {"model": ErrorResponse},
+        403: {"model": ErrorResponse},
+        500: {"model": ErrorResponse}
+    },
+    summary="Download Followers List",
+    description="Downloads followers list as a text file in a ZIP archive."
+)
+async def download_followers_file(
+    username: str,
+    background_tasks: BackgroundTasks,
+    max_count: Annotated[int | None, Query(ge=1, le=10000, description="Maximum number of followers")] = None,
+    include_metadata: Annotated[bool, Query(description="Include metadata file")] = True,
+):
+    """Download followers list to a file."""
+    start_time = time.time()
+    temp_dir = None
+    
+    try:
+        service = get_insta_service()
+        temp_dir = create_temp_download_dir(username)
+        
+        followers = service.download_followers(
+            username=username,
+            target_dir=temp_dir,
+            max_count=max_count,
+            include_metadata=include_metadata
+        )
+        
+        if followers.returned_count == 0:
+            cleanup_directory(temp_dir)
+            raise HTTPException(status_code=404, detail="No followers found to download.")
+        
+        zip_path = create_zip_archive(temp_dir, f"{username}_followers", temp_dir.parent)
+        
+        schedule_cleanup(temp_dir, settings.CLEANUP_AFTER_SECONDS)
+        
+        return FileResponse(
+            path=zip_path,
+            media_type="application/zip",
+            filename=f"{username}_followers.zip",
+            headers={
+                "X-Download-Stats-Followers": str(followers.returned_count),
+                "X-Download-Time-Seconds": f"{time.time() - start_time:.2f}",
+            }
+        )
+        
+    except InstagramDownloaderError as e:
+        if temp_dir:
+            cleanup_directory(temp_dir)
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+    except HTTPException:
+        raise
+    except Exception as e:
+        if temp_dir:
+            cleanup_directory(temp_dir)
+        logger.exception("Unexpected error during followers download")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get(
+    "/download/following/{username}",
+    response_model=FollowerListResponse,
+    responses={
+        200: {"description": "Following list"},
+        404: {"model": ErrorResponse},
+        403: {"model": ErrorResponse},
+        500: {"model": ErrorResponse}
+    },
+    summary="Get Following List",
+    description="Returns list of following for an Instagram profile."
+)
+async def get_following(
+    username: str,
+    max_count: Annotated[int | None, Query(ge=1, le=10000, description="Maximum number of following to return")] = None,
+):
+    """Get following list for a profile."""
+    try:
+        service = get_insta_service()
+        return service.get_following(username, max_count=max_count)
+    except InstagramDownloaderError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+    except Exception as e:
+        logger.exception("Unexpected error getting following")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get(
+    "/download/following/{username}/file",
+    responses={
+        200: {"content": {"application/zip": {}}, "description": "ZIP file"},
+        404: {"model": ErrorResponse},
+        403: {"model": ErrorResponse},
+        500: {"model": ErrorResponse}
+    },
+    summary="Download Following List",
+    description="Downloads following list as a text file in a ZIP archive."
+)
+async def download_following_file(
+    username: str,
+    background_tasks: BackgroundTasks,
+    max_count: Annotated[int | None, Query(ge=1, le=10000, description="Maximum number of following")] = None,
+    include_metadata: Annotated[bool, Query(description="Include metadata file")] = True,
+):
+    """Download following list to a file."""
+    start_time = time.time()
+    temp_dir = None
+    
+    try:
+        service = get_insta_service()
+        temp_dir = create_temp_download_dir(username)
+        
+        following = service.download_following(
+            username=username,
+            target_dir=temp_dir,
+            max_count=max_count,
+            include_metadata=include_metadata
+        )
+        
+        if following.returned_count == 0:
+            cleanup_directory(temp_dir)
+            raise HTTPException(status_code=404, detail="No following found to download.")
+        
+        zip_path = create_zip_archive(temp_dir, f"{username}_following", temp_dir.parent)
+        
+        schedule_cleanup(temp_dir, settings.CLEANUP_AFTER_SECONDS)
+        
+        return FileResponse(
+            path=zip_path,
+            media_type="application/zip",
+            filename=f"{username}_following.zip",
+            headers={
+                "X-Download-Stats-Following": str(following.returned_count),
+                "X-Download-Time-Seconds": f"{time.time() - start_time:.2f}",
+            }
+        )
+        
+    except InstagramDownloaderError as e:
+        if temp_dir:
+            cleanup_directory(temp_dir)
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+    except HTTPException:
+        raise
+    except Exception as e:
+        if temp_dir:
+            cleanup_directory(temp_dir)
+        logger.exception("Unexpected error during following download")
         raise HTTPException(status_code=500, detail=str(e))

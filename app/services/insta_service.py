@@ -30,7 +30,7 @@ from app.exceptions import (
     DownloadError,
     NoContentError,
 )
-from app.models import ProfileInfo, PostMetadata, PostListResponse
+from app.models import ProfileInfo, PostMetadata, PostListResponse, FollowerEntry, FollowerListResponse
 
 logger = logging.getLogger(__name__)
 
@@ -373,6 +373,203 @@ class InstaService:
         
         return posts_metadata
 
+    def get_followers(
+        self,
+        username: str,
+        max_count: int | None = None
+    ) -> FollowerListResponse:
+        """
+        Get followers list for a profile.
+        
+        Args:
+            username: Instagram username
+            max_count: Maximum number of followers to return
+            
+        Returns:
+            FollowerListResponse with followers list
+        """
+        profile = self.get_profile(username)
+        
+        if profile.is_private:
+            raise PrivateProfileError(username)
+        
+        followers_list = []
+        
+        try:
+            followers = self._with_backoff(profile.get_followers)
+            count = 0
+            
+            for follower in followers:
+                if max_count and count >= max_count:
+                    break
+                
+                try:
+                    entry = FollowerEntry(
+                        username=follower.username,
+                        full_name=follower.full_name or None,
+                        is_private=follower.is_private,
+                        is_verified=follower.is_verified,
+                        profile_pic_url=follower.profile_pic_url,
+                    )
+                    followers_list.append(entry)
+                    count += 1
+                except Exception as e:
+                    logger.warning(f"Failed to get follower info: {e}")
+                    continue
+                    
+        except PrivateProfileNotFollowedException:
+            raise PrivateProfileError(username)
+        except ConnectionException as e:
+            if "429" in str(e):
+                raise RateLimitError()
+            raise DownloadError(f"Connection error: {str(e)}")
+        
+        return FollowerListResponse(
+            username=username,
+            list_type="followers",
+            total_count=profile.followers,
+            returned_count=len(followers_list),
+            users=followers_list,
+        )
+
+    def get_following(
+        self,
+        username: str,
+        max_count: int | None = None
+    ) -> FollowerListResponse:
+        """
+        Get following list for a profile.
+        
+        Args:
+            username: Instagram username
+            max_count: Maximum number of following to return
+            
+        Returns:
+            FollowerListResponse with following list
+        """
+        profile = self.get_profile(username)
+        
+        if profile.is_private:
+            raise PrivateProfileError(username)
+        
+        following_list = []
+        
+        try:
+            following = self._with_backoff(profile.get_followees)
+            count = 0
+            
+            for followee in following:
+                if max_count and count >= max_count:
+                    break
+                
+                try:
+                    entry = FollowerEntry(
+                        username=followee.username,
+                        full_name=followee.full_name or None,
+                        is_private=followee.is_private,
+                        is_verified=followee.is_verified,
+                        profile_pic_url=followee.profile_pic_url,
+                    )
+                    following_list.append(entry)
+                    count += 1
+                except Exception as e:
+                    logger.warning(f"Failed to get following info: {e}")
+                    continue
+                    
+        except PrivateProfileNotFollowedException:
+            raise PrivateProfileError(username)
+        except ConnectionException as e:
+            if "429" in str(e):
+                raise RateLimitError()
+            raise DownloadError(f"Connection error: {str(e)}")
+        
+        return FollowerListResponse(
+            username=username,
+            list_type="following",
+            total_count=profile.followees,
+            returned_count=len(following_list),
+            users=following_list,
+        )
+
+    def download_followers(
+        self,
+        username: str,
+        target_dir: Path,
+        max_count: int | None = None,
+        include_metadata: bool = True
+    ) -> FollowerListResponse:
+        """
+        Download followers list to a file.
+        
+        Args:
+            username: Instagram username
+            target_dir: Directory to save the file
+            max_count: Maximum number of followers to download
+            include_metadata: Whether to save metadata file
+            
+        Returns:
+            FollowerListResponse with downloaded followers
+        """
+        target_dir.mkdir(parents=True, exist_ok=True)
+        
+        followers_data = self.get_followers(username, max_count=max_count)
+        
+        if include_metadata:
+            self._save_followers_metadata(followers_data, target_dir / "followers.txt")
+        
+        return followers_data
+
+    def download_following(
+        self,
+        username: str,
+        target_dir: Path,
+        max_count: int | None = None,
+        include_metadata: bool = True
+    ) -> FollowerListResponse:
+        """
+        Download following list to a file.
+        
+        Args:
+            username: Instagram username
+            target_dir: Directory to save the file
+            max_count: Maximum number of following to download
+            include_metadata: Whether to save metadata file
+            
+        Returns:
+            FollowerListResponse with downloaded following
+        """
+        target_dir.mkdir(parents=True, exist_ok=True)
+        
+        following_data = self.get_following(username, max_count=max_count)
+        
+        if include_metadata:
+            self._save_followers_metadata(following_data, target_dir / "following.txt")
+        
+        return following_data
+
+    def _save_followers_metadata(self, data: FollowerListResponse, filepath: Path) -> None:
+        """Save followers/following list to a text file."""
+        content = f"""{data.list_type.title()} List for @{data.username}
+========================================
+
+Total Count: {data.total_count}
+Returned Count: {data.returned_count}
+
+List:
+------
+"""
+        for user in data.users:
+            line = f"@{user.username}"
+            if user.full_name:
+                line += f" - {user.full_name}"
+            if user.is_verified:
+                line += " ✓"
+            if user.is_private:
+                line += " 🔒"
+            content += line + "\n"
+        
+        filepath.write_text(content, encoding="utf-8")
+
     def download_post_by_url(
         self,
         url_or_shortcode: str,
@@ -523,6 +720,8 @@ Video: {"Yes" if metadata.is_video else "No"}
         username: str,
         target_dir: Path,
         max_posts: int | None = None,
+        max_followers: int | None = None,
+        max_following: int | None = None,
         include_metadata: bool = True
     ) -> dict:
         """
@@ -532,6 +731,8 @@ Video: {"Yes" if metadata.is_video else "No"}
             username: Instagram username
             target_dir: Base directory for downloads
             max_posts: Maximum posts to download
+            max_followers: Maximum followers to download
+            max_following: Maximum following to download
             include_metadata: Include metadata files
             
         Returns:
@@ -540,6 +741,8 @@ Video: {"Yes" if metadata.is_video else "No"}
         stats = {
             "posts": 0,
             "profile_pic": False,
+            "followers": 0,
+            "following": 0,
             "errors": []
         }
         
@@ -564,6 +767,36 @@ Video: {"Yes" if metadata.is_video else "No"}
             stats["errors"].append("Posts: Profile is private")
         except Exception as e:
             stats["errors"].append(f"Posts: {str(e)}")
+        
+        # Download followers
+        try:
+            followers_dir = target_dir / "followers"
+            followers = self.download_followers(
+                username,
+                followers_dir,
+                max_count=max_followers,
+                include_metadata=include_metadata
+            )
+            stats["followers"] = followers.returned_count
+        except PrivateProfileError:
+            stats["errors"].append("Followers: Profile is private")
+        except Exception as e:
+            stats["errors"].append(f"Followers: {str(e)}")
+        
+        # Download following
+        try:
+            following_dir = target_dir / "following"
+            following = self.download_following(
+                username,
+                following_dir,
+                max_count=max_following,
+                include_metadata=include_metadata
+            )
+            stats["following"] = following.returned_count
+        except PrivateProfileError:
+            stats["errors"].append("Following: Profile is private")
+        except Exception as e:
+            stats["errors"].append(f"Following: {str(e)}")
         
         return stats
 

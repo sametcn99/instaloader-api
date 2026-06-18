@@ -466,8 +466,16 @@ async function downloadSinglePost(shortcode, btn) {
  */
 async function downloadAll() {
     const maxPosts = document.getElementById('maxPostsAll').value;
+    const maxFollowers = document.getElementById('maxFollowersAll').value;
+    const maxFollowing = document.getElementById('maxFollowingAll').value;
+    
     let url = `${API_BASE}/download/all/${currentUsername}`;
-    if (maxPosts) url += `?max_posts=${maxPosts}`;
+    const params = [];
+    if (maxPosts) params.push(`max_posts=${maxPosts}`);
+    if (maxFollowers) params.push(`max_followers=${maxFollowers}`);
+    if (maxFollowing) params.push(`max_following=${maxFollowing}`);
+    if (params.length > 0) url += '?' + params.join('&');
+    
     await downloadFile(url, 'spinnerAll', `${currentUsername}.zip`);
 }
 
@@ -514,6 +522,28 @@ async function downloadProfilePic() {
     } else {
         await downloadFile(url, 'spinnerPic', `${currentUsername}_profile_pic.jpg`);
     }
+}
+
+/**
+ * Downloads the followers list for the current profile.
+ * @returns {Promise<void>}
+ */
+async function downloadFollowers() {
+    const maxFollowers = document.getElementById('maxFollowers').value;
+    let url = `${API_BASE}/download/followers/${currentUsername}/file`;
+    if (maxFollowers) url += `?max_count=${maxFollowers}`;
+    await downloadFile(url, 'spinnerFollowers', `${currentUsername}_followers.zip`);
+}
+
+/**
+ * Downloads the following list for the current profile.
+ * @returns {Promise<void>}
+ */
+async function downloadFollowing() {
+    const maxFollowing = document.getElementById('maxFollowing').value;
+    let url = `${API_BASE}/download/following/${currentUsername}/file`;
+    if (maxFollowing) url += `?max_count=${maxFollowing}`;
+    await downloadFile(url, 'spinnerFollowing', `${currentUsername}_following.zip`);
 }
 
 /**

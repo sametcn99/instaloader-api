@@ -10,6 +10,8 @@ class ContentType(str, Enum):
     ALL = "all"
     POSTS = "posts"
     PROFILE_PIC = "profile_pic"
+    FOLLOWERS = "followers"
+    FOLLOWING = "following"
 
 
 class ErrorResponse(BaseModel):
@@ -94,9 +96,29 @@ class DownloadStats(BaseModel):
     content_type: ContentType
     total_posts: int = 0
     profile_pic_included: bool = False
+    followers_included: bool = False
+    following_included: bool = False
     total_files: int = 0
     zip_size_bytes: int = 0
     download_time_seconds: float = 0
+
+
+class FollowerEntry(BaseModel):
+    """Single follower/following entry."""
+    username: str
+    full_name: str | None = None
+    is_private: bool = False
+    is_verified: bool = False
+    profile_pic_url: str | None = None
+
+
+class FollowerListResponse(BaseModel):
+    """Response model for follower/following list."""
+    username: str
+    list_type: str
+    total_count: int
+    returned_count: int
+    users: list[FollowerEntry]
 
 
 class SuccessResponse(BaseModel):

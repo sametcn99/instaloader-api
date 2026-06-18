@@ -297,12 +297,21 @@
                                                         <i class="bi bi-collection"></i>
                                                     </div>
                                                     <h3 class="h6">All Content</h3>
-                                                    <p class="text-muted small mb-2">Download all posts & profile picture</p>
-                                                    <div class="mb-2">
-                                                        <label for="maxPostsAll" class="visually-hidden">Maximum number of posts to download</label>
-                                                        <input type="number" class="form-control form-control-sm" 
-                                                               id="maxPostsAll" placeholder="Max posts (optional)" min="1" max="1000"
-                                                               aria-describedby="maxPostsAllHelp">
+                                                    <p class="text-muted small mb-2">Download all posts, profile picture, followers & following</p>
+                                                    <div class="row g-2 mb-2">
+                                                        <div class="col-4">
+                                                            <input type="number" class="form-control form-control-sm" 
+                                                                   id="maxPostsAll" placeholder="Max posts" min="1" max="1000"
+                                                                   aria-describedby="maxPostsAllHelp">
+                                                        </div>
+                                                        <div class="col-4">
+                                                            <input type="number" class="form-control form-control-sm" 
+                                                                   id="maxFollowersAll" placeholder="Max followers" min="1" max="10000">
+                                                        </div>
+                                                        <div class="col-4">
+                                                            <input type="number" class="form-control form-control-sm" 
+                                                                   id="maxFollowingAll" placeholder="Max following" min="1" max="10000">
+                                                        </div>
                                                     </div>
                                                     <button class="btn btn-primary btn-sm w-100" onclick="downloadAll()" aria-label="Download all Instagram content">
                                                         <span class="spinner-border spinner-border-sm me-1 d-none" id="spinnerAll" aria-hidden="true"></span>
@@ -350,6 +359,50 @@
                                                     <button class="btn btn-primary btn-sm w-100" onclick="downloadProfilePic()" aria-label="Download Instagram profile picture">
                                                         <span class="spinner-border spinner-border-sm me-1 d-none" id="spinnerPic" aria-hidden="true"></span>
                                                         <i class="bi bi-download me-1" aria-hidden="true"></i>Download
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Download Followers -->
+                                        <div class="col-md-6">
+                                            <div class="card h-100">
+                                                <div class="card-body">
+                                                    <div class="feature-icon mx-auto" aria-hidden="true">
+                                                        <i class="bi bi-people"></i>
+                                                    </div>
+                                                    <h3 class="h6">Followers List</h3>
+                                                    <p class="text-muted small mb-2">Download followers list as text file</p>
+                                                    <div class="mb-2">
+                                                        <label for="maxFollowers" class="visually-hidden">Maximum number of followers to download</label>
+                                                        <input type="number" class="form-control form-control-sm" 
+                                                               id="maxFollowers" placeholder="Max followers (optional)" min="1" max="10000">
+                                                    </div>
+                                                    <button class="btn btn-primary btn-sm w-100" onclick="downloadFollowers()" aria-label="Download Instagram followers list">
+                                                        <span class="spinner-border spinner-border-sm me-1 d-none" id="spinnerFollowers" aria-hidden="true"></span>
+                                                        <i class="bi bi-download me-1" aria-hidden="true"></i>Download Followers
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Download Following -->
+                                        <div class="col-md-6">
+                                            <div class="card h-100">
+                                                <div class="card-body">
+                                                    <div class="feature-icon mx-auto" aria-hidden="true">
+                                                        <i class="bi bi-person-plus"></i>
+                                                    </div>
+                                                    <h3 class="h6">Following List</h3>
+                                                    <p class="text-muted small mb-2">Download following list as text file</p>
+                                                    <div class="mb-2">
+                                                        <label for="maxFollowing" class="visually-hidden">Maximum number of following to download</label>
+                                                        <input type="number" class="form-control form-control-sm" 
+                                                               id="maxFollowing" placeholder="Max following (optional)" min="1" max="10000">
+                                                    </div>
+                                                    <button class="btn btn-primary btn-sm w-100" onclick="downloadFollowing()" aria-label="Download Instagram following list">
+                                                        <span class="spinner-border spinner-border-sm me-1 d-none" id="spinnerFollowing" aria-hidden="true"></span>
+                                                        <i class="bi bi-download me-1" aria-hidden="true"></i>Download Following
                                                     </button>
                                                 </div>
                                             </div>
